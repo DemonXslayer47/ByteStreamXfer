@@ -45,6 +45,7 @@
                     <div class="file-item form-check">
                         <input type="checkbox" id="{{ file }}" name="files" value="{{ file }}" class="form-check-input">
                         <label for="{{ file }}" class="form-check-label">{{ file }}</label>
+                        <button onclick="deleteFile('{{ file }}')" class="btn btn-danger ml-2">Delete</button>
                     </div>
                 {% endfor %}
                 <button type="button" onclick="downloadFiles()" class="btn btn-primary mt-3">Download Selected Files</button>

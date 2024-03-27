@@ -13,6 +13,32 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# Route to delete files
+@app.route('/delete/<filename>', methods=['POST'])
+def delete_file(filename):
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        # Inform the receiver that the file has been deleted
+        socketio.emit('file_deleted', {'filename': filename}, broadcast=True)
+        return jsonify({"message": f"{filename} deleted successfully"})
+    else:
+        return jsonify({"error": f"{filename} not found"})
+
+# Route to handle file download and delete the file after downloading
+@app.route('/download/<filename>')
+def download_file(filename):
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if os.path.exists(file_path):
+        # Delete the file after successful download
+        @after_this_request
+        def remove_file(response):
+            os.remove(file_path)
+            return response
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+    else:
+        return jsonify({"error": f"{filename} not found"})
+    
 @app.route('/')
 def index():
     # Serve the main page with send and receive options
@@ -34,10 +60,6 @@ def receive():
     # Serve the page for listing and downloading files
     files = os.listdir(app.config['UPLOAD_FOLDER'])
     return render_template('receive.html', files=files)
-
-@app.route('/download/<filename>')
-def download_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
 def socket_server():
     HOST = '127.0.0.1'
@@ -83,5 +105,5 @@ def handle_request_file(json):
 if __name__ == '__main__':
     # Start the socket server in a separate thread
     threading.Thread(target=socket_server, daemon=True).start()
-    socketio.run(app, host='10.178.50.208', port=5000, debug=True, use_reloader=False)
+    socketio.run(app, host='192.168.1.143', port=5000, debug=True, use_reloader=False)
 #10.178.50.147

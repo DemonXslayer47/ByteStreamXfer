@@ -74,6 +74,10 @@ body {
     align-items: center; /* Center the content vertically */
 }
 
+.btn-danger {
+    margin-left: 5px;
+}
+
 
 /* Media Queries for Responsive Design */
 
