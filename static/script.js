@@ -1,114 +1,57 @@
-var socket = io.connect('http://' + document.domain + ':' + location.port);
+let socket;
 
-socket.on('file_chunk', function(msg) {
-    var link = document.createElement('a');
-    link.download = msg.filename;
-    link.href = 'data:application/octet-stream;base64,' + btoa(msg.data);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-});
+window.onload = function() {
+    socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+    socket.on('file_shared', function(data) {
+        console.log('File shared event received:', data);
+        document.getElementById('upload-area').style.display = 'none';
+        document.getElementById('file-info').style.display = 'block';
+        document.getElementById('file-name').textContent = data.filename;
+        document.getElementById('file-size').textContent = formatBytes(data.size);
+        document.getElementById('qr-code').src = data.qr;
+        document.getElementById('sharing-code').textContent = data.pin;
+    });
+};
 
-function uploadFiles() {
-    const fileInput = document.getElementById('fileInput');
-    const files = fileInput.files;
+function handleFileUpload(files) {
     const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-        formData.append('file', files[i]);
-    }
+    Array.from(files).forEach(file => {
+        formData.append('file', file); // Note the change here to 'files[]' to signify multiple files
+    });
 
-    fetch('/send', {
+    fetch('/upload', {
         method: 'POST',
         body: formData,
     })
     .then(response => response.json())
-    .then(data => alert(data.message))
-    .catch(error => console.error('Error:', error));
-}
-
-function downloadFiles() {
-    // Get all checked checkboxes in the form
-    const selectedFiles = document.querySelectorAll('#filesForm input[name="files"]:checked');
-
-    selectedFiles.forEach(fileCheckbox => {
-        const filename = fileCheckbox.value;
-        downloadFile(filename);
-    });
-}
-
-function downloadFile(filename) {
-    // Create a link and set the URL to the download route for the file
-    const link = document.createElement('a');
-    link.href = `/download/${filename}`;
-    // Use the 'download' attribute to specify the filename
-    link.setAttribute('download', filename);
-    // Append the link to the document and trigger the download
-    document.body.appendChild(link);
-    link.click();
-    // Remove the link from the document
-    document.body.removeChild(link);
-}
-
-function deleteSelectedFiles() {
-    // Get all checked checkboxes in the form
-    const selectedFiles = document.querySelectorAll('#filesForm input[name="files"]:checked');
-
-    selectedFiles.forEach(fileCheckbox => {
-        const filename = fileCheckbox.value;
-        deleteFile(filename);
-    });
-}
-
-// Function to display uploaded files
-function displayUploadedFiles() {
-    const fileInput = document.getElementById('fileInput');
-    const uploadedFilesList = document.getElementById('uploadedFilesList');
-    uploadedFilesList.innerHTML = ''; // Clear previous list
-
-    // Display selected files
-    for (let i = 0; i < fileInput.files.length; i++) {
-        const file = fileInput.files[i];
-        const listItem = document.createElement('li');
-        listItem.className = 'list-group-item';
-        listItem.textContent = file.name;
-
-        // Add a delete button for each file
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete';
-        deleteButton.className = 'btn btn-sm btn-danger ml-2';
-        deleteButton.onclick = function() {
-            deleteFile(file.name);
-            // Remove the file from the UI
-            listItem.parentNode.removeChild(listItem);
-        };
-        listItem.appendChild(deleteButton);
-
-        uploadedFilesList.appendChild(listItem);
-    }
-}
-
-// Call displayUploadedFiles() whenever files are selected
-document.getElementById('fileInput').addEventListener('change', displayUploadedFiles);
-
-// Function to delete a file
-function deleteFile(filename) {
-    fetch(`/delete/${filename}`, {
-        method: 'POST',
-    })
-    .then(response => response.json())
     .then(data => {
-        alert(data.message);
-        // Inform the receiver that the file has been deleted
-        socketio.emit('file_deleted', {'filename': filename}, broadcast=True);
+        console.log('Upload successful:', data);
+        // Assuming now you have a single response for the ZIP of all uploaded files
+        displayFileData(data); // Directly call displayFileData with the single response
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+    });
 }
-// Event listener for file deletion from SocketIO message
-socket.on('file_deleted', function(data) {
-    const filename = data.filename;
-    // Remove the deleted file from the UI
-    const fileItem = document.getElementById(filename);
-    if (fileItem) {
-        fileItem.parentElement.removeChild(fileItem);
-    }
-});
+
+function displayFileData(fileData) {
+    document.getElementById('upload-area').style.display = 'none';
+    const fileInfoDiv = document.getElementById('file-info');
+    fileInfoDiv.style.display = 'block';
+    
+    // Assuming 'fileData' contains 'filename', 'qr', and 'pin' for the ZIP file
+    document.getElementById('file-name').textContent = fileData.filename;
+    // The 'file-size' display logic might need adjustments since we're now dealing with a ZIP file
+    document.getElementById('qr-code').src = fileData.qr;
+    document.getElementById('sharing-code').textContent = `PIN: ${fileData.pin}`;
+}
+
+// Helper function to format bytes into human-readable format
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}

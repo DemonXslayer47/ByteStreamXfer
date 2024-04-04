@@ -1,109 +1,99 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
-from flask_socketio import SocketIO, emit
+from flask import Flask, render_template, request, send_from_directory, abort, jsonify
+from werkzeug.utils import secure_filename
+from flask_socketio import SocketIO
 import os
-import threading
-import socket
+import base64
+import random
+import io
+import zipfile
+import qrcode
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+app.config['UPLOAD_FOLDER'] = 'uploaded_files'
+app.config['MAX_CONTENT_LENGTH'] = 3 * 1024 * 1024 * 1024  # 2 gigabytes
+
 socketio = SocketIO(app)
-UPLOAD_FOLDER = 'uploaded_files'
 
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# Adjust with your actual IP address
+network_ip = 'http://10.178.50.101:5000'
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# Ensure the upload folder exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Route to delete files
-@app.route('/delete/<filename>', methods=['POST'])
-def delete_file(filename):
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        # Inform the receiver that the file has been deleted
-        socketio.emit('file_deleted', {'filename': filename}, broadcast=True)
-        return jsonify({"message": f"{filename} deleted successfully"})
-    else:
-        return jsonify({"error": f"{filename} not found"})
+code_file_mapping = {}
 
-# Route to handle file download and delete the file after downloading
-@app.route('/download/<filename>')
-def download_file(filename):
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if os.path.exists(file_path):
-        # Delete the file after successful download
-        @after_this_request
-        def remove_file(response):
-            os.remove(file_path)
-            return response
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
-    else:
-        return jsonify({"error": f"{filename} not found"})
-    
 @app.route('/')
 def index():
-    # Serve the main page with send and receive options
     return render_template('index.html')
 
-@app.route('/send', methods=['GET', 'POST'])
-def send():
+@app.route('/download', methods=['GET', 'POST'])
+def download_page():
     if request.method == 'POST':
-        files = request.files.getlist('file')  # This handles multiple files
-        for file in files:
-            if file:
-                filename = file.filename
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        return jsonify({"message": f"{len(files)} files uploaded successfully"})
-    return render_template('send.html')
-
-@app.route('/receive')
-def receive():
-    # Serve the page for listing and downloading files
-    files = os.listdir(app.config['UPLOAD_FOLDER'])
-    return render_template('receive.html', files=files)
-
-def socket_server():
-    HOST = '127.0.0.1'
-    PORT = 6001  # Port for the socket server
-    BUFFER_SIZE = 1024
-
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-        server_socket.bind((HOST, PORT))
-        server_socket.listen()
-        print(f"Socket server listening on {HOST}:{PORT}")
-
-        while True:
-            conn, _ = server_socket.accept()
-            with conn:
-                filename = conn.recv(BUFFER_SIZE).decode()
-                if filename:
-                    file_path = os.path.join(UPLOAD_FOLDER, filename)
-                    if os.path.exists(file_path):
-                        with open(file_path, 'rb') as f:
-                            while True:
-                                bytes_read = f.read(BUFFER_SIZE)
-                                if not bytes_read:
-                                    break  # End of file
-                                conn.sendall(bytes_read)
-                    else:
-                        print("File not found:", filename)
-
-@socketio.on('request_file')
-def handle_request_file(json):
-    filename = json['filename']
-    file_path = os.path.join(UPLOAD_FOLDER, filename)
-    if os.path.exists(file_path):
-        with open(file_path, 'rb') as f:
-            while True:
-                chunk = f.read(1024)
-                if not chunk:
-                    break
-                emit('file_chunk', {'filename': filename, 'data': chunk.decode('latin-1')})
-        emit('file_complete', {'filename': filename})
+        code = request.form.get('code')
+        return redirect(url_for('download_file', code=code))
     else:
-        emit('file_error', {'filename': filename, 'message': 'File not found'})
+        return render_template('download.html')  # Assuming this is your first download page HTML
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    files = request.files.getlist('file')
+    if not files:
+        return 'No files to upload', 400
+
+    zip_filename = "files.zip"
+    zip_path = os.path.join(app.config['UPLOAD_FOLDER'], zip_filename)
+    
+    with zipfile.ZipFile(zip_path, 'w') as myzip:
+        for file in files:
+            if file.filename:
+                filename = secure_filename(file.filename)
+                in_memory_file = io.BytesIO()
+                file.save(in_memory_file)
+                in_memory_file.seek(0)
+                myzip.writestr(filename, in_memory_file.read())
+    
+    code = generate_random_pin()
+    code_file_mapping[code] = zip_filename
+    full_url = network_ip + '/download/' + code
+    qr_code_img = generate_qr_code(full_url)
+
+    return jsonify({'filename': zip_filename, 'qr': qr_code_img, 'pin': code})
+
+@app.route('/download/<code>')
+def download_file(code):
+    filename = code_file_mapping.get(code)
+    if filename and os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
+        # Render a page that shows the file details and provides a download button.
+        return render_template('download_page.html', filename=filename, code=code)
+    else:
+        abort(404)
+
+@app.route('/download/file/<code>')
+def download_file_direct(code):
+    filename = code_file_mapping.get(code)
+    if filename and os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+    else:
+        abort(404)
+
+def generate_random_pin():
+    return '{:04d}'.format(random.randint(0, 9999))
+
+def generate_qr_code(data):
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffered = io.BytesIO()
+    img.save(buffered, format="JPEG")
+    qr_code_data = base64.b64encode(buffered.getvalue()).decode('utf-8')
+    return f"data:image/jpeg;base64,{qr_code_data}"
 
 if __name__ == '__main__':
-    # Start the socket server in a separate thread
-    threading.Thread(target=socket_server, daemon=True).start()
-    socketio.run(app, host='192.168.1.143', port=5000, debug=True, use_reloader=False)
-#10.178.50.147
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000)

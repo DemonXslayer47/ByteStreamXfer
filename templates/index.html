@@ -2,68 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ByteStreamXfer</title>
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>BytestreamXfer - Share Your Files</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </head>
 <body>
-
-<!-- Header -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" href="#">ByteStreamXfer</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ml-auto">
-                <li class="nav-item active">
-                    <a class="nav-link" href="/">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/send">Send</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/receive">Receive</a>
-                </li>
+    <header>
+        <div id="logo">BytestreamXfer</div>
+        <nav>
+            <ul>
+                <li><a href="/download">Download</a></li>
             </ul>
-        </div>
-    </div>
-</nav>
-<!-- End Header -->
+        </nav>
+    </header>
 
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-md-12 text-center">
-            <h1>Welcome to ByteStreamXfer</h1>
-            <p class="lead">Effortlessly send and receive files</p>
+    <main>
+        <div id="upload-area" onclick="document.getElementById('file-input').click()">
+            <input type="file" id="file-input" hidden onchange="handleFileUpload(this.files)" multiple>
+            <div id="upload-icon">+</div>
+            <p>Click to browse or drag files here to start sharing</p>
         </div>
-    </div>
-    <div class="row mt-5">
-        <div class="col-md-6 text-center">
-            <div class="circle send" onclick="window.location='/send'">Send Files</div>
-        </div>
-        <div class="col-md-6 text-center">
-            <div class="circle receive" onclick="window.location='/receive'">Receive Files</div>
-        </div>
-    </div>
-</div>
 
-<!-- Footer -->
-<footer class="footer bg-dark text-white mt-5">
-    <div class="container text-center">
-        <span class="text-muted">ByteStreamXfer &copy; 2024</span>
-    </div>
-</footer>
-<!-- End Footer -->
-
-<!-- Bootstrap JS and jQuery -->
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <div id="file-info" style="display: none;">
+            <img id="qr-code" src="" alt="QR Code">
+            <div id="file-details">
+                <span id="file-name"></span>
+                <span id="file-size"></span>
+            </div>
+            <div id="sharing-code"></div>
+            <p id="keep-open-notice">Keep this page open to continue sharing.</p>
+        </div>
+    </main>
 </body>
 </html>

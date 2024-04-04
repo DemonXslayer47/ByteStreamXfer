@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Download File</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div id="download-container">
+        <h1>Ready to Download</h1>
+        <p>File: {{ filename }}</p>
+        <!-- Direct download link or button -->
+        <a href="{{ url_for('download_file_direct', code=code) }}" download="{{ filename }}">Download File</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Download File - BytestreamXfer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='download.js') }}" defer></script>
+</head>
+<body>
+    <div id="download-container">
+        <h1>Connect to nearby devices</h1>
+        <p>Use this page to directly transfer files from your phone to your computer or to download files from another computer on the same network.</p>
+
+        <input type="text" id="code-input" maxlength="4" placeholder="Enter the 4 digit code">
+        <button id="confirm-button" onclick="confirmCode()">Confirm</button>
+    </div>
+</body>
+</html>
