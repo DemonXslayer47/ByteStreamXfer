@@ -7,6 +7,7 @@ import random
 import io
 import zipfile
 import qrcode
+from cryptography.fernet import Fernet
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -16,12 +17,21 @@ app.config['MAX_CONTENT_LENGTH'] = 3 * 1024 * 1024 * 1024  # 2 gigabytes
 socketio = SocketIO(app)
 
 # Adjust with your actual IP address
-network_ip = 'http://10.178.50.101:5000'
+network_ip = 'http://192.168.1.143:5000'
 
 # Ensure the upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 code_file_mapping = {}
+
+key = Fernet.generate_key()
+cipher_suite = Fernet(key)
+
+def encrypt_data(data):
+    return cipher_suite.encrypt(data)
+
+def dencrypt_data(data):
+    return cipher_suite.dencrypt(data)
 
 @app.route('/')
 def index():
