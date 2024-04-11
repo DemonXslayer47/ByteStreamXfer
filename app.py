@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_from_directory, abort, jsonify
+from flask import Flask, render_template, request, send_from_directory, abort, jsonify, redirect, url_for, send_file
 from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO
 import os
@@ -12,26 +12,37 @@ from cryptography.fernet import Fernet
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 app.config['UPLOAD_FOLDER'] = 'uploaded_files'
-app.config['MAX_CONTENT_LENGTH'] = 3 * 1024 * 1024 * 1024  # 2 gigabytes
+app.config['MAX_CONTENT_LENGTH'] = 3 * 1024 * 1024 * 1024  # 3 gigabytes
 
 socketio = SocketIO(app)
 
-# Adjust with your actual IP address
 network_ip = 'http://192.168.1.143:5000'
 
-# Ensure the upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 code_file_mapping = {}
 
-key = Fernet.generate_key()
+# Key management for Fernet encryption
+KEY_FILE = 'fernet_key.key'
+
+def load_or_create_key():
+    if os.path.exists(KEY_FILE):
+        with open(KEY_FILE, 'rb') as key_file:
+            key = key_file.read()
+    else:
+        key = Fernet.generate_key()
+        with open(KEY_FILE, 'wb') as key_file:
+            key_file.write(key)
+    return key
+
+key = load_or_create_key()
 cipher_suite = Fernet(key)
 
 def encrypt_data(data):
     return cipher_suite.encrypt(data)
 
-def dencrypt_data(data):
-    return cipher_suite.dencrypt(data)
+def decrypt_data(data):
+    return cipher_suite.decrypt(data)
 
 @app.route('/')
 def index():
@@ -43,7 +54,7 @@ def download_page():
         code = request.form.get('code')
         return redirect(url_for('download_file', code=code))
     else:
-        return render_template('download.html')  # Assuming this is your first download page HTML
+        return render_template('download.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -61,11 +72,12 @@ def upload_file():
                 in_memory_file = io.BytesIO()
                 file.save(in_memory_file)
                 in_memory_file.seek(0)
-                myzip.writestr(filename, in_memory_file.read())
+                encrypted_content = encrypt_data(in_memory_file.read())
+                myzip.writestr(filename, encrypted_content)
     
     code = generate_random_pin()
     code_file_mapping[code] = zip_filename
-    full_url = network_ip + '/download/' + code
+    full_url = f"{network_ip}/download/{code}"
     qr_code_img = generate_qr_code(full_url)
 
     return jsonify({'filename': zip_filename, 'qr': qr_code_img, 'pin': code})
@@ -74,7 +86,6 @@ def upload_file():
 def download_file(code):
     filename = code_file_mapping.get(code)
     if filename and os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
-        # Render a page that shows the file details and provides a download button.
         return render_template('download_page.html', filename=filename, code=code)
     else:
         abort(404)
@@ -82,8 +93,20 @@ def download_file(code):
 @app.route('/download/file/<code>')
 def download_file_direct(code):
     filename = code_file_mapping.get(code)
-    if filename and os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+    if not filename:
+        abort(404)
+    
+    zip_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if os.path.isfile(zip_path):
+        decrypted_files = io.BytesIO()
+        with zipfile.ZipFile(zip_path, 'r') as encrypted_zip:
+            with zipfile.ZipFile(decrypted_files, 'w') as decrypted_zip:
+                for encrypted_file in encrypted_zip.infolist():
+                    encrypted_content = encrypted_zip.read(encrypted_file.filename)
+                    decrypted_content = decrypt_data(encrypted_content)
+                    decrypted_zip.writestr(encrypted_file.filename, decrypted_content)
+        decrypted_files.seek(0)
+        return send_file(decrypted_files, attachment_filename=filename, as_attachment=True)
     else:
         abort(404)
 
