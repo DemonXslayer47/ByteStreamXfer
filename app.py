@@ -106,7 +106,7 @@ def download_file_direct(code):
                     decrypted_content = decrypt_data(encrypted_content)
                     decrypted_zip.writestr(encrypted_file.filename, decrypted_content)
         decrypted_files.seek(0)
-        return send_file(decrypted_files, attachment_filename=filename, as_attachment=True)
+        return send_file(decrypted_files, as_attachment=True, mimetype='application/zip', download_name=filename)
     else:
         abort(404)
 
