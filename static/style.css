@@ -8,7 +8,7 @@ body, html {
 
 header {
     width: 100%;
-    background: #000; /* Header with a solid black background */
+    background: #000; 
     padding: 10px 0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     position: fixed;
@@ -20,7 +20,7 @@ header {
     float: left;
     margin-left: 20px;
     font-size: 24px;
-    color: #ffa500; /* Logo color to match the orange theme */
+    color: #ffa500; 
 }
 
 nav ul {
@@ -41,36 +41,84 @@ nav ul li a {
     text-decoration: none;
     font-size: 18px;
 }
+nav ul li a:hover {
+    color: #ffa500;
+}
 
 main {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: calc(100% - 60px); /* Adjust height considering header */
-    margin-top: 60px; /* Give some space for the fixed header */
+    height: calc(100% - 60px);
+    margin-top: 60px; 
 }
 
-#upload-area {
+#actions-container {
+    display: flex;
+    justify-content: space-around; 
+    margin: 20px;
+    gap: 30px;
+}
+
+#upload-area, a#download-area { 
     border: 2px dashed #777;
     border-radius: 20px;
     padding: 50px;
     cursor: pointer;
     transition: background-color 0.2s;
-    margin: 20px;
+    flex-basis: 45%;
+    text-decoration: none; 
+    color: inherit; 
+    display: flex; 
+    justify-content: center;
+    align-items: center;
+    flex-direction: column; 
 }
 
-#upload-area:hover {
+#upload-area:hover, #download-area:hover {
     background-color: #333;
 }
 
-#upload-icon {
-    font-size: 96px; /* Larger upload icon */
-    color: #ffa500; /* Orange color to match the theme */
+.action-icon {
+    font-size: 96px;
+    color: #ffa500;
+    display: block; 
+    text-align: center; 
 }
 
-#upload-area p {
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400&display=swap');
+
+.background-text {
+    position: absolute;
+    width: 100%;
+    top:10%;
+    left: 0;
+    text-align: center;
+    padding: 20px 0;
+}
+.background-text p {
+    font-size: 40px; 
+    color: #f2f2f2; 
+    margin: 0;
+    line-height: 1.4; 
+    font-family: 'Montserrat', sans-serif;
+}
+.background-text p strong {
+    font-weight: 700; 
+}
+.background-text .colored-text {
+    -webkit-text-stroke: 2px #ffa500; 
+    -webkit-text-fill-color: transparent; 
+    font-size: 50px;
+    font-family: 'Roboto', sans-serif; 
+}
+
+
+#upload-area p, #download-area p {
+    text-align: center;
     margin-top: 20px;
     font-size: 20px;
+    color: #f2f2f2;
 }
 
 #file-info {
@@ -79,7 +127,7 @@ main {
 }
 
 #file-info img {
-    width: 150px; /* Size of the QR code image */
+    width: 150px; 
     height: 150px;
     margin-bottom: 20px;
 }
@@ -92,12 +140,12 @@ main {
 #sharing-code {
     font-size: 24px;
     font-weight: bold;
-    background: #ffa500; /* Orange background for the code box */
+    background: #ffa500; 
     display: inline-block;
     padding: 10px;
     margin-bottom: 20px;
     border-radius: 5px;
-    color: black; /* Text color for the code box */
+    color: black; 
 }
 
 #keep-open-notice {
@@ -105,7 +153,6 @@ main {
     font-size: 14px;
 }
 
-/* Clearfix for the floats */
 header::after {
     content: "";
     display: table;
@@ -114,7 +161,11 @@ header::after {
 
 #download-container {
     text-align: center;
-    color: #f2f2f2;
+    max-width: 800px; 
+    margin: 15% auto; 
+    padding: 20px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05); 
 }
 
 #download-container h1 {
@@ -131,29 +182,44 @@ header::after {
     margin-bottom: 32px;
 }
 
+
+
+.input-group {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0; 
+}
+
 #code-input {
     padding: 10px;
-    margin-bottom: 16px;
-    font-size: 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 4px 0 0 4px; 
+    background: #333;
+    color: #fff;
+    margin-right: 8px; 
     width: 200px;
     text-align: center;
 }
 
 #confirm-button {
     padding: 10px 20px;
-    font-size: 20px;
-    background-color: #ffa500; /* Orange color for the confirm button */
+    font-size: 1rem;
+    background-color: #ffa500; 
     color: black;
     border: none;
+    border-radius: 0 4px 4px 0; 
     cursor: pointer;
+
 }
 
 #confirm-button:hover {
-    background-color: #e69500; /* Darker orange on hover */
+    background-color: #e69500; 
 }
 
 #qr-code {
-    width: 200px; /* Adjust size as needed */
+    width: 200px; 
     height: 200px;
     margin: 20px auto;
     display: block;
@@ -162,10 +228,27 @@ header::after {
 #sharing-code {
     font-size: 24px;
     font-weight: bold;
-    color: #ffa500; /* Styling the code text to match the theme */
+    color: #ffa500; 
     background: #000;
     padding: 10px 20px;
     border-radius: 5px;
     display: inline-block;
     margin: 20px auto;
+}
+
+
+footer {
+    text-align: center;
+    padding: 10px;
+    background-color: #000;
+    color: #f2f2f2;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+}
+
+footer p {
+    font-size: 0.875rem;
+    margin: 0; 
 }

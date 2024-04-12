@@ -51,10 +51,15 @@ def index():
 @app.route('/download', methods=['GET', 'POST'])
 def download_page():
     if request.method == 'POST':
-        code = request.form.get('code')
-        return redirect(url_for('download_file', code=code))
+        code = request.form.get('code')  # Retrieve 'code' from form data
+        if code:
+            return redirect(url_for('download_file', code=code))  # Redirect with 'code' parameter
+        else:
+            # Handle case where code is not provided
+            return abort(400)
     else:
         return render_template('download.html')
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
