@@ -1,6 +1,6 @@
-from flask import Flask, render_template, request, send_from_directory, abort, jsonify, redirect, url_for, send_file
-from werkzeug.utils import secure_filename
+from flask import Flask, render_template, request, jsonify, abort, send_file, redirect, url_for
 from flask_socketio import SocketIO
+from werkzeug.utils import secure_filename
 import os
 import base64
 import random
@@ -16,7 +16,7 @@ app.config['MAX_CONTENT_LENGTH'] = 3 * 1024 * 1024 * 1024  # 3 gigabytes
 
 socketio = SocketIO(app)
 
-network_ip = 'http://192.168.1.143:5000'
+network_ip = 'http://192.168.1.141:5000'
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -51,15 +51,13 @@ def index():
 @app.route('/download', methods=['GET', 'POST'])
 def download_page():
     if request.method == 'POST':
-        code = request.form.get('code')  # Retrieve 'code' from form data
+        code = request.form.get('code')
         if code:
-            return redirect(url_for('download_file', code=code))  # Redirect with 'code' parameter
+            return redirect(url_for('download_file', code=code))
         else:
-            # Handle case where code is not provided
-            return abort(400)
+            abort(400)
     else:
         return render_template('download.html')
-
 
 @app.route('/upload', methods=['POST'])
 def upload_file():

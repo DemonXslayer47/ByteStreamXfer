@@ -1,10 +1,10 @@
 import unittest
-from app import encrypt_data, decrypt_data, key  # Make sure to import correctly from your app
+from app import encrypt_data, decrypt_data
 
 class TestEncryptionDecryption(unittest.TestCase):
     def setUp(self):
         # Setup runs before each test method
-        self.original_data = b"Hello, World!"  # Data to test
+        self.original_data = b"This is a test message for encryption and decryption."  
 
     def test_encryption_decryption(self):
         # Test that data is correctly encrypted and then decrypted back to original
